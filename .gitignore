@@ -60,3 +60,4 @@ crashlytics-build.properties
 /[Aa]ssets/StreamingAssets/**/*.bank.meta
 
 fmod_editor.log
+.vscode
