@@ -61,3 +61,4 @@ crashlytics-build.properties
 
 fmod_editor.log
 .vscode
+.idea
