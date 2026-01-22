@@ -1,5 +1,19 @@
 {
   "dependencies": {
+    "com.monumentgames.playerinventory": {
+      "version": "https://github.com/Monument-Games/Player-Inventory.git",
+      "depth": 0,
+      "source": "git",
+      "dependencies": {},
+      "hash": "5a92fedf6a51806fe4673b623253100fcd71d2a5"
+    },
+    "com.monumentgames.playermovement": {
+      "version": "https://github.com/Monument-Games/Player-Movement-3D.git",
+      "depth": 0,
+      "source": "git",
+      "dependencies": {},
+      "hash": "eab263ed3840313f21810937e38788e3e4e3d86b"
+    },
     "com.unity.ai.navigation": {
       "version": "2.0.9",
       "depth": 0,
