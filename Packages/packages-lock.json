@@ -5,7 +5,7 @@
       "depth": 0,
       "source": "git",
       "dependencies": {},
-      "hash": "3da2c14fbc2c6c75131bc66b0a9f5c0069c360f3"
+      "hash": "d99e1d387c0c42aced4d225546fedda668e53d6d"
     },
     "com.monumentgames.playermovement": {
       "version": "https://github.com/Monument-Games/Player-Movement-3D.git",
