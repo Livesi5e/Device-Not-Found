@@ -5,14 +5,14 @@
       "depth": 0,
       "source": "git",
       "dependencies": {},
-      "hash": "d99e1d387c0c42aced4d225546fedda668e53d6d"
+      "hash": "f6ab9fc0e01478986d40023d97092d0555dff711"
     },
     "com.monumentgames.playermovement": {
       "version": "https://github.com/Monument-Games/Player-Movement-3D.git",
       "depth": 0,
       "source": "git",
       "dependencies": {},
-      "hash": "1b08cf2587b7a9b615e0a03b8a637192fc9f6ac3"
+      "hash": "49e594712c3d4c3f9d388952a3fdd0dce78111cc"
     },
     "com.unity.ai.navigation": {
       "version": "2.0.9",
