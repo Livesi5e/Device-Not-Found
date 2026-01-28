@@ -6,13 +6,13 @@ public class EnemyAI : MonoBehaviour
     [Header("References")]
     [SerializeField] private Transform _player;
 
-    [Header("Day Reset / Home")]
+    [Header("Day Reset / Home (optional)")]
     [SerializeField] private Transform _homePoint;
 
     [Header("Vision")]
     [SerializeField] private float viewDistance = 12f;
     [SerializeField] private float viewAngle = 90f;
-    [SerializeField] private float visionCheckInterval = 0.1f; // (bleibt drin, auch wenn wir primär per Time.time checken)
+    [SerializeField] private float visionCheckInterval = 0.1f;
     [SerializeField] private LayerMask obstacleMask;
 
     [Header("Movement Speeds")]
@@ -33,14 +33,14 @@ public class EnemyAI : MonoBehaviour
 
     // ===== Horror: Chase Ramp =====
     [Header("Horror: Chase Ramp")]
-    [SerializeField] private float _chaseRampTime = 4f;              // Sekunden bis max erreicht
-    [SerializeField] private float _chaseSpeedMultiplierMax = 1.6f;  // max Faktor auf chaseSpeed
+    [SerializeField] private float _chaseRampTime = 4f;
+    [SerializeField] private float _chaseSpeedMultiplierMax = 1.6f;
     private float _chaseTimer;
 
     // ===== Horror: Look Around =====
     [Header("Horror: Look Around (Search)")]
     [SerializeField] private float _lookAroundDuration = 1.8f;
-    [SerializeField] private float _lookAroundTurnSpeed = 120f;      // Grad/s
+    [SerializeField] private float _lookAroundTurnSpeed = 120f;
     private float _lookAroundTimer;
 
     private NavMeshAgent _agent;
@@ -71,41 +71,43 @@ public class EnemyAI : MonoBehaviour
                 _player = p.transform;
         }
 
-        _agent.speed = patrolSpeed;
-        _agent.stoppingDistance = 0f;
+        if (_agent.enabled)
+        {
+            _agent.speed = patrolSpeed;
+            _agent.stoppingDistance = 0f;
 
-        if (patrolPoints != null && patrolPoints.Length > 0)
-            SetPatrolDestination(patrolPoints[_patrolIndex].position);
+            if (patrolPoints != null && patrolPoints.Length > 0)
+                SetPatrolDestination(patrolPoints[_patrolIndex].position);
+        }
     }
 
     private void Update()
     {
-        // Tagsüber: Gegner steht still
+        // ===== DAY: Agent AUS =====
         if (GameManager.Instance != null &&
             GameManager.Instance.CurrentPhase != GameManager.Phase.Night)
         {
-            _agent.ResetPath();
-            _chaseTimer = 0f;
-            _lookAroundTimer = 0f;
+            DisableAgentForDay();
             return;
         }
+
+        // ===== NIGHT: Agent AN =====
+        EnableAgentForNight();
 
         if (_player == null || !_agent.isOnNavMesh)
             return;
 
-        // Vision check nicht jedes Frame
-        bool seesPlayer = false;
+        // Vision check not every frame
         if (Time.time >= _nextVisionCheckTime)
         {
             _nextVisionCheckTime = Time.time + Mathf.Max(0.02f, visionCheckInterval);
-            seesPlayer = CanSeePlayer();
 
-            if (seesPlayer)
+            if (CanSeePlayer())
             {
                 _lastKnownPlayerPos = _player.position;
                 _lastTimeSeen = Time.time;
                 _hasSearchTarget = false;
-                _lookAroundTimer = 0f; // wenn er dich sieht, nicht weiter "scannen"
+                _lookAroundTimer = 0f;
                 _state = State.Chase;
             }
             else if (_state == State.Chase)
@@ -114,7 +116,7 @@ public class EnemyAI : MonoBehaviour
             }
         }
 
-        // Chase-Ramp Timer pflegen
+        // Chase ramp timer
         if (_state == State.Chase)
             _chaseTimer = Mathf.Min(_chaseTimer + Time.deltaTime, _chaseRampTime);
         else
@@ -140,7 +142,43 @@ public class EnemyAI : MonoBehaviour
         }
     }
 
-    // ================= CHASE (mit Speed-Ramp) =================
+    // ================= DAY/NIGHT AGENT TOGGLE =================
+    private void DisableAgentForDay()
+    {
+        if (_agent == null) return;
+        if (!_agent.enabled) return;
+
+        _agent.ResetPath();
+        _agent.velocity = Vector3.zero;
+        _agent.enabled = false;
+
+        // State sauber zurücksetzen
+        _state = State.Patrol;
+        _hasSearchTarget = false;
+        _chaseTimer = 0f;
+        _lookAroundTimer = 0f;
+    }
+
+    private void EnableAgentForNight()
+    {
+        if (_agent == null) return;
+        if (_agent.enabled) return;
+
+        _agent.enabled = true;
+
+        // Optional: Stabiler Start nach Enable
+        if (_agent.isOnNavMesh)
+            _agent.Warp(transform.position);
+
+        _agent.speed = patrolSpeed;
+        _agent.stoppingDistance = 0f;
+
+        // Wenn Patrolpoints existieren, setze Ziel (damit er nicht "idle" bleibt)
+        if (patrolPoints != null && patrolPoints.Length > 0)
+            SetPatrolDestination(patrolPoints[_patrolIndex].position);
+    }
+
+    // ================= CHASE (with speed ramp) =================
     private void HandleChase()
     {
         float t = (_chaseRampTime <= 0.01f) ? 1f : (_chaseTimer / _chaseRampTime);
@@ -152,22 +190,19 @@ public class EnemyAI : MonoBehaviour
         _agent.SetDestination(_player.position);
     }
 
-    // ================= SEARCH (mit Look-Around) =================
+    // ================= SEARCH (with look-around) =================
     private void HandleSearch()
     {
-        // 1) Look-Around Phase: stehen + drehen
+        // Look-around phase
         if (_lookAroundTimer > 0f)
         {
             _lookAroundTimer -= Time.deltaTime;
-
             _agent.ResetPath();
             transform.Rotate(0f, _lookAroundTurnSpeed * Time.deltaTime, 0f);
-
-            // Wenn die Scan-Zeit vorbei ist, weiter normal suchen
             return;
         }
 
-        // 2) Wenn Memory abgelaufen ist -> zurück zu Patrol (falls vorhanden)
+        // Memory expired -> patrol if possible
         if (Time.time - _lastTimeSeen > loseSightMemoryTime)
         {
             _hasSearchTarget = false;
@@ -177,10 +212,9 @@ public class EnemyAI : MonoBehaviour
                 _state = State.Patrol;
                 return;
             }
-            // sonst: weiter suchen (random points), damit er nicht stehen bleibt
         }
 
-        // 3) Neues Suchziel um lastKnown generieren
+        // Generate a new search target around last known position
         if (!_hasSearchTarget)
         {
             Vector3 randomDir = Random.insideUnitSphere * searchRadius;
@@ -196,11 +230,11 @@ public class EnemyAI : MonoBehaviour
             }
         }
 
-        // 4) Suchziel erreicht -> kurz scannen (Look-Around), dann weiter
+        // Reached target -> start look-around
         if (_hasSearchTarget && !_agent.pathPending && _agent.remainingDistance <= arriveDistance)
         {
             _hasSearchTarget = false;
-            _lookAroundTimer = _lookAroundDuration; // <-- Horror: er schaut sich um
+            _lookAroundTimer = _lookAroundDuration;
         }
     }
 
@@ -246,7 +280,7 @@ public class EnemyAI : MonoBehaviour
         }
     }
 
-    // Wird vom GameManager beim Wechsel zu Tag aufgerufen
+    // Optional: called by GameManager when caught
     public void ResetToHomeAndStop()
     {
         _state = State.Patrol;
@@ -254,11 +288,16 @@ public class EnemyAI : MonoBehaviour
         _chaseTimer = 0f;
         _lookAroundTimer = 0f;
 
-        _agent.ResetPath();
+        if (_agent != null && _agent.enabled)
+        {
+            _agent.ResetPath();
+            _agent.velocity = Vector3.zero;
+        }
 
         if (_homePoint == null) return;
 
-        if (_agent.isOnNavMesh)
+        // Wenn Agent aktiv ist, Warp benutzen, sonst normal setzen
+        if (_agent != null && _agent.enabled && _agent.isOnNavMesh)
             _agent.Warp(_homePoint.position);
         else
             transform.position = _homePoint.position;
