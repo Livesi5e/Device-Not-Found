@@ -1,4 +1,6 @@
+using System.Collections.Generic;
 using UnityEngine;
+using MonumentGames.PlayerInventory;
 
 public class GameManager : MonoBehaviour
 {
@@ -14,8 +16,11 @@ public class GameManager : MonoBehaviour
     [SerializeField] private int _rentCost = 20;
 
     [Header("References")]
+    [SerializeField] private List<DropoffArea> _places;
+    [SerializeField] private List<Item> _tablets;
     [SerializeField] private Transform _player;
     [SerializeField] private Transform _daySpawnPoint;
+    [SerializeField] private Animator _anim;
 
     [Header("UI")]
     [SerializeField] private NightSummaryUI _nightSummaryUI;
@@ -35,17 +40,24 @@ public class GameManager : MonoBehaviour
         Instance = this;
     }
 
-    // 🔑 DAS ist der wichtige Teil
-    private void Start()
-    {
-        StartNight();
+    public void StartDay() {
+        _phase = Phase.Day;
+    }
+
+    public void CheckDayOver() {
+        for (int i = 0; i < 4; i++) {
+            if (_places[i].GetCurrentItem() != _tablets[i])
+                return;
+        }
+
+        _anim.SetTrigger("Transition");
     }
 
     public void StartNight()
     {
+        Debug.Log("Start Night");
         _phase = Phase.Night;
         _moneyAtNightStart = _money;
-        Debug.Log("Night started");
     }
 
     public void AddMoney(int amount)
@@ -97,7 +109,6 @@ public class GameManager : MonoBehaviour
     // Wird vom "Weiter"-Button im UI aufgerufen
     public void ConfirmNightSummary()
     {
-        Debug.Log("Day continues");
-        // hier später Shop / Tag-Gameplay
+        StartDay();
     }
 }
