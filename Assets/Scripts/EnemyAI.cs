@@ -42,6 +42,10 @@ public class EnemyAI : MonoBehaviour
     [SerializeField] private float _lookAroundDuration = 1.8f;
     [SerializeField] private float _lookAroundTurnSpeed = 120f;
     private float _lookAroundTimer;
+    
+    [SerializeField] private AudioSource heartbeatSource;
+    private bool _heartbeatPlaying;
+
 
     private NavMeshAgent _agent;
 
@@ -140,6 +144,22 @@ public class EnemyAI : MonoBehaviour
                 HandlePatrol();
                 break;
         }
+        
+        if (heartbeatSource == null) return;
+
+        bool isChasing = (_state == State.Chase);
+
+        if (isChasing && !_heartbeatPlaying)
+        {
+            heartbeatSource.Play();
+            _heartbeatPlaying = true;
+        }
+        else if (!isChasing && _heartbeatPlaying)
+        {
+            heartbeatSource.Stop();
+            _heartbeatPlaying = false;
+        }
+
     }
 
     // ================= DAY/NIGHT AGENT TOGGLE =================

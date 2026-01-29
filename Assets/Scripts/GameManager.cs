@@ -48,9 +48,22 @@ public class GameManager : MonoBehaviour
     [SerializeField] private GameObject _SNESDay;
     [SerializeField] private GameObject _SNESNight;
     
-
+    [Header("Audio")]
+    [SerializeField] private AudioSource _heartbeatSource;
+    [SerializeField] private AudioSource nightStartSource;
+    
     [Header("UI")]
     [SerializeField] private NightSummaryUI _nightSummaryUI;
+    [SerializeField] private PhaseScreenUI _phaseScreenUI;
+    private bool _isGameOver;
+    
+    [Header("Night Timer")]
+    [SerializeField] private float _nightDurationSeconds = 10;
+    private float _nightTimer;
+    private bool _nightTimerActive;
+    public float NightTimeLeft => _nightTimer;
+    
+    
 
     private int _moneyAtNightStart;
     private Phase time = Phase.Day;
@@ -111,11 +124,16 @@ public class GameManager : MonoBehaviour
         _tablets[2].GetComponent<Tablet>().SetTabletInfo(ps5Info[Random.Range(0, ps5Info.Count)]);
         _tablets[3].GetComponent<Tablet>().SetTabletInfo(SNESInfo[Random.Range(0, SNESInfo.Count)]);
 
+        List<Transform> disposableList = new List<Transform>();
+        for (int i = 0; i < 4; i++)
+        {
+            disposableList.Add(tabletsStartPositons[i]);
+        }
         // Randomize Order of tablets on table
         for (int i = 0; i < 4; i++)
         {
-            Transform tabletStartPos = tabletsStartPositons[Random.Range(0, tabletsStartPositons.Count)];
-            tabletsStartPositons.Remove(tabletStartPos);
+            Transform tabletStartPos = disposableList[Random.Range(0, disposableList.Count)];
+            disposableList.Remove(tabletStartPos);
             _tablets[i].transform.SetParent(tabletStartPos);
         }
         
@@ -129,35 +147,38 @@ public class GameManager : MonoBehaviour
         for (int i = 0; i < 4; i++)
         {
             var rotation = _tablets[i].transform.localRotation;
-            rotation.eulerAngles = new Vector3(0, 90, 90);
+            rotation.eulerAngles = new Vector3(180, -90, 90);
             _tablets[i].transform.localRotation = rotation;
         }
     }
 
     public void CheckDayOver() {
+        Debug.Log("CheckDayOver aufgerufen");
         for (int i = 0; i < 4; i++) {
             if (_places[i].GetCurrentItem() != _tablets[i])
+            {
+                Debug.Log("Falsch");
                 return;
+            }
+                
         }
-
+        
+        nightStartSource.Play();
         _anim.SetTrigger("Transition");
+        
     }
 
     public void Update()
     {
-        /*if (Input.GetKeyDown(KeyCode.Q))
+        if (_phase != Phase.Night) return;
+        if (!_nightTimerActive) return;
+        
+        _nightTimer -= Time.deltaTime;
+        if (_nightTimer <= 0)
         {
-            if (time == Phase.Day)
-            {
-                time = Phase.Night;
-                SwitchNightLight();
-            }
-            else
-            {
-                time = Phase.Day;
-                SwitchDayLight();
-            }
-        }*/
+            _nightTimerActive = false;
+            EndNightTimeUp();
+        }
     }
 
     public void StartNight()
@@ -180,6 +201,9 @@ public class GameManager : MonoBehaviour
         {
             prop.SetFallen(true);
         }
+        
+        _nightTimer = _nightDurationSeconds;
+        _nightTimerActive = true;
     }
 
 
@@ -187,12 +211,12 @@ public class GameManager : MonoBehaviour
     {
         _money += Mathf.Max(0, amount);
     }
-
-    // Wird vom EnemyAI aufgerufen
-    public void EndNightCaught()
+    
+    public void EndNightTimeUp()
     {
         if (_phase != Phase.Night) return;
 
+        _nightTimerActive = false;
         _phase = Phase.Day;
 
         int earnedThisNight = Mathf.Max(0, _money - _moneyAtNightStart);
@@ -201,9 +225,39 @@ public class GameManager : MonoBehaviour
         int moneyBeforeRent = _money;
         _money = Mathf.Max(0, _money - rent);
 
-        // Gegner resetten
-        foreach (var enemy in FindObjectsByType<EnemyAI>(FindObjectsSortMode.None))
-            enemy.ResetToHomeAndStop();
+        if (_nightSummaryUI != null)
+        {
+            _nightSummaryUI.Show(
+                earnedThisNight,
+                rent,
+                moneyBeforeRent,
+                _money
+            );
+        }
+    }
+
+
+    // Wird vom EnemyAI aufgerufen
+    public void EndNightCaught()
+    {  
+        _nightTimerActive = false;
+        
+        if (_phase != Phase.Night) return;
+
+        _phase = Phase.Day;
+        
+        if (_heartbeatSource != null && _heartbeatSource.isPlaying)
+        {
+            _heartbeatSource.Stop();
+        }
+
+        int earnedThisNight = Mathf.Max(0, _money - _moneyAtNightStart);
+        int rent = _rentCost;
+
+        int moneyBeforeRent = _money;
+        _isGameOver = moneyBeforeRent < _rentCost;
+        _money = Mathf.Max(0, _money - rent);
+        
 
         // Player teleportieren
         if (_player != null && _daySpawnPoint != null)
@@ -228,8 +282,52 @@ public class GameManager : MonoBehaviour
             );
         }
     }
+    
+    public void AfterNightContinue()
+    {
+        Debug.Log("AfterNightContinue aufgerufen");
 
-    // Wird vom "Weiter"-Button im UI aufgerufen
+        if (_phaseScreenUI == null)
+        {
+            Debug.LogError("PhaseScreenUI ist im GameManager nicht zugewiesen!");
+            return;
+        }
+
+        if (_isGameOver)
+        {
+            _phaseScreenUI.Show(
+                "GAME OVER\nDu konntest die Miete nicht bezahlen.",
+                "Neustart",
+                RestartGame
+            );
+            return;
+        }
+
+        _phaseScreenUI.Show(
+            "TAG BEGINNT",
+            "Weiter",
+            ContinueToDay
+        );
+    }
+
+    private void ContinueToDay()
+    {
+        _phaseScreenUI.Hide();
+        ConfirmNightSummary();
+        LockCursor();
+    }
+
+    private void RestartGame()
+    {
+        // Szene neu laden
+        UnityEngine.SceneManagement.SceneManager.LoadScene(
+            UnityEngine.SceneManagement.SceneManager.GetActiveScene().buildIndex
+        );
+        
+    }
+
+
+    // 
     public void ConfirmNightSummary()
     {
         StartDay();

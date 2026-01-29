@@ -16,12 +16,15 @@ public class PlayerInteraction : MonoBehaviour
     {
         if (Input.GetKeyDown(((GameConfig)Config.cfg).interactionKey))
         {
+            Debug.Log("Ray Fired");   
             Ray ray = cam.ViewportPointToRay(new Vector3(0.5f, 0.5f, 0));
 
             if (Physics.Raycast(ray, out RaycastHit hit, Config.cfg.interactionRange))
             {
+                Debug.Log("Hit");
                 if (hit.collider.CompareTag("Interactable"))
                 {
+                    Debug.Log("Interactable Hit");
                     hit.transform.GetComponent<Interact>().OnInteract();
                 }
             }

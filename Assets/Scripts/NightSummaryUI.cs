@@ -50,6 +50,6 @@ public class NightSummaryUI : MonoBehaviour
         Cursor.lockState = CursorLockMode.Locked;
         Cursor.visible = false;
 
-        GameManager.Instance?.ConfirmNightSummary();
+        GameManager.Instance?.AfterNightContinue();
     }
 }
