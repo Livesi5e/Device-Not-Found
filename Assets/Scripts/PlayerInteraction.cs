@@ -1,9 +1,16 @@
 using MonumentGames.Config;
+using MonumentGames.PlayerInventory;
+using MonumentGames.PlayerMovement3D;
+using TMPro;
 using UnityEngine;
 
 public class PlayerInteraction : MonoBehaviour
 {
     [SerializeField] private Camera cam;
+    [SerializeField] private PlayerInventory inventory;
+    [SerializeField] private PlayerMovement movement;
+    [SerializeField] private GameObject tabletUI;
+    [SerializeField] private TMP_Text tabletInfoText;
     
     private void Update()
     {
@@ -17,6 +24,18 @@ public class PlayerInteraction : MonoBehaviour
                 {
                     hit.transform.GetComponent<Interact>().OnInteract();
                 }
+            }
+        }
+
+        if (Input.GetKeyDown(((GameConfig)Config.cfg).openTabletKey))
+        {
+            if (inventory.HasItem())
+            {
+                Cursor.visible = true;
+                Cursor.lockState = CursorLockMode.Confined;
+                movement.enabled = false;
+                tabletInfoText.text = inventory.GetItem().GetComponent<Tablet>().GetTabletInfo();
+                tabletUI.SetActive(true);
             }
         }
     }

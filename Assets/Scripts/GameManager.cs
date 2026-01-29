@@ -10,11 +10,17 @@ public class GameManager : MonoBehaviour
     public enum Phase { Day, Night }
 
     [Header("State")]
-    [SerializeField] private Phase _phase = Phase.Night;
+    [SerializeField] private Phase _phase = Phase.Day;
 
     [Header("Money")]
     [SerializeField] private int _money = 0;
     [SerializeField] private int _rentCost = 20;
+    
+    [Header("Tablet Infos")]
+    [SerializeField] private List<string> mouseInfo;
+    [SerializeField] private List<string> keyboardInfo;
+    [SerializeField] private List<string> ps5Info;
+    [SerializeField] private List<string> SNESInfo;
 
     [Header("References")]
     [SerializeField] private List<DropoffArea> _places;
@@ -22,6 +28,7 @@ public class GameManager : MonoBehaviour
     [SerializeField] private Transform _player;
     [SerializeField] private Transform _daySpawnPoint;
     [SerializeField] private Animator _anim;
+    [SerializeField] private List<Transform> tabletsStartPositons;
     
     [Header("Enemies (Day/Night Swap)")]
     [SerializeField] private GameObject _mouseDay;
@@ -52,7 +59,13 @@ public class GameManager : MonoBehaviour
         Instance = this;
     }
 
+    private void Start()
+    {
+        ResetTablets();
+    }
+
     public void StartDay() {
+        // Set Phase to day
         _phase = Phase.Day;
         
         if (_mouseDay != null) _mouseDay.SetActive(true);
@@ -63,6 +76,39 @@ public class GameManager : MonoBehaviour
         if (_ps5Night != null) _ps5Night.SetActive(false);
         if (_SNESDay != null) _SNESDay.SetActive(true);
         if (_SNESNight != null) _SNESNight.SetActive(false);
+
+        ResetTablets();
+    }
+
+    private void ResetTablets()
+    {
+        // Generate random tablet information
+        _tablets[0].GetComponent<Tablet>().SetTabletInfo(mouseInfo[Random.Range(0, mouseInfo.Count)]);
+        _tablets[1].GetComponent<Tablet>().SetTabletInfo(keyboardInfo[Random.Range(0, keyboardInfo.Count)]);
+        _tablets[2].GetComponent<Tablet>().SetTabletInfo(ps5Info[Random.Range(0, ps5Info.Count)]);
+        _tablets[3].GetComponent<Tablet>().SetTabletInfo(SNESInfo[Random.Range(0, SNESInfo.Count)]);
+
+        // Randomize Order of tablets on table
+        for (int i = 0; i < 4; i++)
+        {
+            Transform tabletStartPos = tabletsStartPositons[Random.Range(0, tabletsStartPositons.Count)];
+            tabletsStartPositons.Remove(tabletStartPos);
+            _tablets[i].transform.SetParent(tabletStartPos);
+        }
+        
+        // Set tablets on top of table
+        _tablets[0].transform.localPosition = Vector3.zero;
+        _tablets[1].transform.localPosition = Vector3.zero;
+        _tablets[2].transform.localPosition = Vector3.zero;
+        _tablets[3].transform.localPosition = Vector3.zero;
+        
+        // Reset rotation of tablets
+        for (int i = 0; i < 4; i++)
+        {
+            var rotation = _tablets[i].transform.localRotation;
+            rotation.eulerAngles = new Vector3(0, 90, 90);
+            _tablets[i].transform.localRotation = rotation;
+        }
     }
 
     public void CheckDayOver() {
@@ -141,5 +187,11 @@ public class GameManager : MonoBehaviour
     public void ConfirmNightSummary()
     {
         StartDay();
+    }
+
+    public void LockCursor()
+    {
+        Cursor.visible = false;
+        Cursor.lockState = CursorLockMode.Locked;
     }
 }
