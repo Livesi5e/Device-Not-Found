@@ -70,12 +70,20 @@ public class GameManager : MonoBehaviour
 
     private void Start()
     {
-        ResetTablets();
+        if (_phase == Phase.Night)
+            StartNight();
+        else
+        {
+            StartDay();
+            ResetTablets();
+        }
+        
     }
 
     public void StartDay() {
         // Set Phase to day
         _phase = Phase.Day;
+        SwitchDayLight();
         
         if (_mouseDay != null) _mouseDay.SetActive(true);
         if (_mouseNight != null) _mouseNight.SetActive(false);
@@ -87,6 +95,12 @@ public class GameManager : MonoBehaviour
         if (_SNESNight != null) _SNESNight.SetActive(false);
 
         ResetTablets();
+        
+        foreach (var prop in FindObjectsByType<KnockableProp>(FindObjectsSortMode.None))
+        {
+            prop.SetFallen(false);
+        }
+        
     }
 
     private void ResetTablets()
@@ -131,7 +145,7 @@ public class GameManager : MonoBehaviour
 
     public void Update()
     {
-        if (Input.GetKeyDown(KeyCode.Q))
+        /*if (Input.GetKeyDown(KeyCode.Q))
         {
             if (time == Phase.Day)
             {
@@ -143,7 +157,7 @@ public class GameManager : MonoBehaviour
                 time = Phase.Day;
                 SwitchDayLight();
             }
-        }
+        }*/
     }
 
     public void StartNight()
@@ -151,6 +165,7 @@ public class GameManager : MonoBehaviour
         Debug.Log("Start Night");
         _phase = Phase.Night;
         _moneyAtNightStart = _money;
+        SwitchNightLight();
 
         if (_mouseDay != null) _mouseDay.SetActive(false);
         if (_mouseNight != null) _mouseNight.SetActive(true);
@@ -160,6 +175,11 @@ public class GameManager : MonoBehaviour
         if (_ps5Night != null) _ps5Night.SetActive(true);
         if (_SNESDay != null) _SNESDay.SetActive(false);
         if (_SNESNight != null) _SNESNight.SetActive(true);
+
+        foreach (var prop in FindObjectsByType<KnockableProp>(FindObjectsSortMode.None))
+        {
+            prop.SetFallen(true);
+        }
     }
 
 

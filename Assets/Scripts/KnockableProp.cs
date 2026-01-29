@@ -15,6 +15,10 @@ public class KnockableProp : MonoBehaviour
     [Header("Interaction")]
     public KeyCode interactKey = KeyCode.E;
     public int reward = 10;
+    
+    [Header("Sound")]
+    [SerializeField] private AudioSource audioSource;
+
 
     private bool playerInRange = false;
     private Vector3 basePosition;
@@ -22,6 +26,7 @@ public class KnockableProp : MonoBehaviour
     void Start()
     {
         basePosition = transform.position;
+        audioSource = GetComponent<AudioSource>();
         ApplyState();
     }
 
@@ -33,6 +38,7 @@ public class KnockableProp : MonoBehaviour
         {
             isFallen = false;
             ApplyState();
+            audioSource.Play();
             GameManager.Instance.AddMoney(reward);
         }
     }
