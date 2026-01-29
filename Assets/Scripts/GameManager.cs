@@ -1,7 +1,9 @@
+using System;
 using System.Collections.Generic;
 using UnityEngine;
 using MonumentGames.PlayerInventory;
 using UnityEditor;
+using Random = UnityEngine.Random;
 
 public class GameManager : MonoBehaviour
 {
@@ -29,6 +31,12 @@ public class GameManager : MonoBehaviour
     [SerializeField] private Transform _daySpawnPoint;
     [SerializeField] private Animator _anim;
     [SerializeField] private List<Transform> tabletsStartPositons;
+    [SerializeField] private Light sun;
+    [SerializeField] private Camera cam;
+    [SerializeField] private GameObject flashlight;
+    [SerializeField] private GameObject dayPP;
+    [SerializeField] private GameObject nightPP;
+    [SerializeField] private AudioSource noise;
     
     [Header("Enemies (Day/Night Swap)")]
     [SerializeField] private GameObject _mouseDay;
@@ -45,6 +53,7 @@ public class GameManager : MonoBehaviour
     [SerializeField] private NightSummaryUI _nightSummaryUI;
 
     private int _moneyAtNightStart;
+    private Phase time = Phase.Day;
 
     public Phase CurrentPhase => _phase;
     public int Money => _money;
@@ -120,6 +129,23 @@ public class GameManager : MonoBehaviour
         _anim.SetTrigger("Transition");
     }
 
+    public void Update()
+    {
+        if (Input.GetKeyDown(KeyCode.Q))
+        {
+            if (time == Phase.Day)
+            {
+                time = Phase.Night;
+                SwitchNightLight();
+            }
+            else
+            {
+                time = Phase.Day;
+                SwitchDayLight();
+            }
+        }
+    }
+
     public void StartNight()
     {
         Debug.Log("Start Night");
@@ -193,5 +219,27 @@ public class GameManager : MonoBehaviour
     {
         Cursor.visible = false;
         Cursor.lockState = CursorLockMode.Locked;
+    }
+
+    public void SwitchDayLight()
+    {
+        sun.gameObject.SetActive(true);
+        RenderSettings.ambientMode = UnityEngine.Rendering.AmbientMode.Skybox;
+        cam.clearFlags = CameraClearFlags.Skybox;
+        flashlight.SetActive(false);
+        dayPP.SetActive(true);
+        nightPP.SetActive(false);
+        noise.Pause();
+    }
+
+    public void SwitchNightLight()
+    {
+        sun.gameObject.SetActive(false);
+        RenderSettings.ambientMode = UnityEngine.Rendering.AmbientMode.Flat;
+        cam.clearFlags = CameraClearFlags.Color;
+        flashlight.SetActive(true);
+        dayPP.SetActive(false);
+        nightPP.SetActive(true);
+        noise.Play();
     }
 }
